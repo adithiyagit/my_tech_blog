@@ -1,0 +1,260 @@
+{% extends "blog/base_generic.html" %}
+
+{% block title %}{{ blog.title }}{% endblock %}
+
+{% block content %}
+<article class="blog-post">
+    <!-- Post Header -->
+    <header class="mb-4">
+        {% if blog.featured_image %}
+            <img src="{{ blog.featured_image.url }}" alt="{{ blog.title }}" 
+                 class="img-fluid rounded mb-4 w-100" style="max-height: 400px; object-fit: cover;">
+        {% endif %}
+        
+        <h1 class="display-4 mb-3">{{ blog.title }}</h1>
+        
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div class="d-flex align-items-center">
+                {% if blog.author.user.userprofile.avatar %}
+                    <img src="{{ blog.author.user.userprofile.avatar.url }}" 
+                         alt="{{ blog.author }}" class="rounded-circle me-3" 
+                         width="48" height="48">
+                {% else %}
+                    <i class="bi bi-person-circle fs-1 me-3 text-muted"></i>
+                {% endif %}
+                <div>
+                    <a href="{% url 'blogger-detail' blog.author.pk %}" 
+                       class="text-decoration-none h5 mb-0">{{ blog.author }}</a>
+                    <div class="text-muted">
+                        <small>
+                            Published {{ blog.post_date|date:"F j, Y" }}
+                            {% if blog.updated_date > blog.post_date %}
+                                • Updated {{ blog.updated_date|date:"F j, Y" }}
+                            {% endif %}
+                        </small>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="d-flex align-items-center">
+                <span class="badge bg-primary me-2" title="Views">
+                    <i class="bi bi-eye"></i> {{ blog.views }}
+                </span>
+                <button class="btn btn-outline-danger btn-sm like-button" 
+                        data-blog-id="{{ blog.slug }}"
+                        {% if not user.is_authenticated %}disabled{% endif %}>
+                    <i class="bi {% if user in blog.likes.all %}bi-heart-fill{% else %}bi-heart{% endif %}"></i>
+                    <span class="like-count">{{ blog.likes.count }}</span>
+                </button>
+            </div>
+        </div>
+        
+        <div class="mb-4">
+            {% for category in blog.categories.all %}
+                <a href="{% url 'blogs' %}?category={{ category.slug }}" 
+                   class="badge text-bg-primary text-decoration-none me-2">
+                    {{ category.name }}
+                </a>
+            {% endfor %}
+            {% for tag in blog.tags.all %}
+                <a href="{% url 'blogs' %}?tag={{ tag.slug }}" 
+                   class="badge text-bg-secondary text-decoration-none me-1">
+                    #{{ tag.name }}
+                </a>
+            {% endfor %}
+        </div>
+    </header>
+
+    <!-- Post Content -->
+    <div class="blog-content mb-5">
+        {{ blog.content|linebreaks }}
+    </div>
+
+    <!-- Author Bio -->
+    <div class="card bg-light mb-5">
+        <div class="card-body">
+            <h5 class="card-title">About the Author</h5>
+            <div class="d-flex">
+                {% if blog.author.user.userprofile.avatar %}
+                    <img src="{{ blog.author.user.userprofile.avatar.url }}" 
+                         alt="{{ blog.author }}" class="rounded-circle me-3" 
+                         width="64" height="64">
+                {% else %}
+                    <i class="bi bi-person-circle fs-1 me-3"></i>
+                {% endif %}
+                <div>
+                    <h6>{{ blog.author }}</h6>
+                    <p class="mb-2">{{ blog.author.bio }}</p>
+                    <div class="social-links">
+                        {% if blog.author.website %}
+                            <a href="{{ blog.author.website }}" class="text-decoration-none me-2" 
+                               target="_blank" rel="noopener noreferrer">
+                                <i class="bi bi-globe"></i>
+                            </a>
+                        {% endif %}
+                        {% if blog.author.twitter %}
+                            <a href="https://twitter.com/{{ blog.author.twitter }}" 
+                               class="text-decoration-none me-2" target="_blank" rel="noopener noreferrer">
+                                <i class="bi bi-twitter"></i>
+                            </a>
+                        {% endif %}
+                        {% if blog.author.github %}
+                            <a href="https://github.com/{{ blog.author.github }}" 
+                               class="text-decoration-none" target="_blank" rel="noopener noreferrer">
+                                <i class="bi bi-github"></i>
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Related Posts -->
+    {% if related_posts %}
+        <div class="mb-5">
+            <h3 class="h4 mb-4">Related Posts</h3>
+            <div class="row g-4">
+                {% for post in related_posts %}
+                    <div class="col-md-4">
+                        <div class="card h-100">
+                            {% if post.featured_image %}
+                                <img src="{{ post.featured_image.url }}" class="card-img-top" 
+                                     alt="{{ post.title }}" loading="lazy" 
+                                     style="height: 150px; object-fit: cover;">
+                            {% endif %}
+                            <div class="card-body">
+                                <h5 class="card-title">
+                                    <a href="{{ post.get_absolute_url }}" class="text-decoration-none">
+                                        {{ post.title }}
+                                    </a>
+                                </h5>
+                                <p class="card-text">
+                                    <small class="text-muted">{{ post.post_date|date }}</small>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Comments Section -->
+    <section id="comments" class="mb-5">
+        <h3 class="h4 mb-4">
+            Comments 
+            <span class="badge bg-secondary">{{ blog.comment_set.count }}</span>
+        </h3>
+
+        {% if user.is_authenticated %}
+            <div class="card mb-4">
+                <div class="card-body">
+                    <form method="post" action="{% url 'blog-comment' blog.slug %}">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="content" class="form-label">Add a comment</label>
+                            <textarea class="form-control" id="content" name="content" rows="3" required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Post Comment</button>
+                    </form>
+                </div>
+            </div>
+        {% else %}
+            <div class="alert alert-info" role="alert">
+                Please <a href="{% url 'login' %}?next={{ request.path }}" class="alert-link">login</a> 
+                to add a comment.
+            </div>
+        {% endif %}
+
+        {% if comments %}
+            <div class="comments-list">
+                {% for comment in comments %}
+                    <div class="comment card mb-3 {% if comment.author == blog.author.user %}border-warning{% endif %}">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <div class="d-flex align-items-center">
+                                    {% if comment.author.userprofile.avatar %}
+                                        <img src="{{ comment.author.userprofile.avatar.url }}" 
+                                             alt="{{ comment.author }}" class="rounded-circle me-2" 
+                                             width="32" height="32">
+                                    {% else %}
+                                        <i class="bi bi-person-circle me-2"></i>
+                                    {% endif %}
+                                    <div>
+                                        <strong>{{ comment.author }}</strong>
+                                        {% if comment.author == blog.author.user %}
+                                            <span class="badge bg-warning text-dark ms-1">Author</span>
+                                        {% endif %}
+                                        <small class="text-muted d-block">
+                                            {{ comment.post_date|date:"F j, Y g:i A" }}
+                                        </small>
+                                    </div>
+                                </div>
+                                <div>
+                                    <button class="btn btn-sm btn-outline-primary like-comment-button" 
+                                            data-comment-id="{{ comment.id }}"
+                                            {% if not user.is_authenticated %}disabled{% endif %}>
+                                        <i class="bi {% if user in comment.likes.all %}bi-heart-fill{% else %}bi-heart{% endif %}"></i>
+                                        <span class="like-count">{{ comment.likes.count }}</span>
+                                    </button>
+                                </div>
+                            </div>
+                            <p class="card-text mb-0">{{ comment.content|linebreaks }}</p>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="text-muted">No comments yet. Be the first to comment!</p>
+        {% endif %}
+    </section>
+</article>
+
+{% endblock %}
+
+{% block sidebar %}
+    {{ block.super }}
+    
+    <script>
+        // Like functionality for blog posts
+        document.querySelector('.like-button')?.addEventListener('click', function() {
+            const blogSlug = this.dataset.blogId;
+            const likeCount = this.querySelector('.like-count');
+            const icon = this.querySelector('i');
+            
+            fetch(`/blog/${blogSlug}/like/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.cookie.match(/csrftoken=([\w-]+)/)[1],
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                likeCount.textContent = data.count;
+                icon.className = data.liked ? 'bi bi-heart-fill' : 'bi bi-heart';
+            });
+        });
+
+        // Like functionality for comments
+        document.querySelectorAll('.like-comment-button').forEach(button => {
+            button.addEventListener('click', function() {
+                const commentId = this.dataset.commentId;
+                const likeCount = this.querySelector('.like-count');
+                const icon = this.querySelector('i');
+                
+                fetch(`/blog/comment/${commentId}/like/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.cookie.match(/csrftoken=([\w-]+)/)[1],
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    likeCount.textContent = data.count;
+                    icon.className = data.liked ? 'bi bi-heart-fill' : 'bi bi-heart';
+                });
+            });
+        });
+    </script>
+{% endblock %}

@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Blog{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --bs-body-font-family: 'Inter', sans-serif;
+        }
+        body {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .navbar {
+            box-shadow: 0 2px 4px rgba(0,0,0,.1);
+        }
+        .card {
+            transition: transform 0.2s;
+        }
+        .card:hover {
+            transform: translateY(-2px);
+        }
+        .sidebar {
+            position: sticky;
+            top: 1rem;
+        }
+        [data-bs-theme="dark"] {
+            --bs-body-bg: #1a1a1a;
+            --bs-body-color: #e0e0e0;
+        }
+        .blog-content img {
+            max-width: 100%;
+            height: auto;
+        }
+        .comment {
+            border-left: 3px solid var(--bs-primary);
+        }
+        .author-comment {
+            border-left-color: var(--bs-warning);
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg sticky-top bg-body-tertiary">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="{% url 'index' %}">
+                <i class="bi bi-journal-text"></i> Blog
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" 
+                    data-bs-target="#navbarContent">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarContent">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'index' %}active{% endif %}" 
+                           href="{% url 'index' %}">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'blogs' %}active{% endif %}" 
+                           href="{% url 'blogs' %}">Blogs</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'bloggers' %}active{% endif %}" 
+                           href="{% url 'bloggers' %}">Bloggers</a>
+                    </li>
+                </ul>
+                <form class="d-flex me-3" role="search" method="GET" action="{% url 'blogs' %}">
+                    <div class="input-group">
+                        <input class="form-control" type="search" name="search" placeholder="Search posts..." aria-label="Search">
+                        <button class="btn btn-outline-primary" type="submit">
+                            <i class="bi bi-search"></i>
+                        </button>
+                    </div>
+                </form>
+                <div class="d-flex align-items-center">
+                    <button class="btn btn-link nav-link me-2" id="darkModeToggle">
+                        <i class="bi bi-moon-stars"></i>
+                    </button>
+                    
+                    <div class="dropdown">
+                        <button class="btn btn-link nav-link dropdown-toggle" 
+                                type="button" data-bs-toggle="dropdown">
+                            {% if user.is_authenticated %}
+                                {% if user.userprofile.avatar %}
+                                    <img src="{{ user.userprofile.avatar.url }}" 
+                                         alt="{{ user.username }}" 
+                                         class="rounded-circle" 
+                                         style="width: 24px; height: 24px; object-fit: cover;">
+                                {% else %}
+                                    <i class="bi bi-person-circle"></i>
+                                {% endif %}
+                                <span class="ms-1">{{ user.username }}</span>
+                            {% else %}
+                                <i class="bi bi-person-circle"></i>
+                                <span class="ms-1">Account</span>
+                            {% endif %}
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            {% if user.is_authenticated %}
+                                {% if user.is_staff %}
+                                    <li>
+                                        <a class="dropdown-item" href="{% url 'admin:index' %}">
+                                            <i class="bi bi-gear"></i> Admin Panel
+                                        </a>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                {% endif %}
+                                <li>
+                                    <form method="post" action="{% url 'logout' %}">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="next" value="{{ request.path }}">
+                                        <button type="submit" class="dropdown-item">
+                                            <i class="bi bi-box-arrow-right"></i> Logout
+                                        </button>
+                                    </form>
+                                </li>
+                            {% else %}
+                                <li>
+                                    <a class="dropdown-item" href="{% url 'login' %}?next={{ request.path }}">
+                                        <i class="bi bi-box-arrow-in-right"></i> Login
+                                    </a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container my-4">
+        <div class="row g-4">
+            <!-- Main Content Area -->
+            <div class="col-lg-8">
+                {% block content %}{% endblock %}
+            </div>
+            
+            <!-- Sidebar -->
+            <div class="col-lg-4">
+                <div class="sidebar">
+                    {% block sidebar %}
+                    <!-- Recent Posts -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <i class="bi bi-clock-history"></i> Recent Posts
+                        </div>
+                        <div class="list-group list-group-flush">
+                            {% for post in recent_posts %}
+                                <a href="{{ post.get_absolute_url }}" class="list-group-item list-group-item-action">
+                                    {{ post.title }}
+                                    <small class="text-muted d-block">{{ post.post_date|date }}</small>
+                                </a>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Popular Authors -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <i class="bi bi-award"></i> Popular Authors
+                        </div>
+                        <div class="list-group list-group-flush">
+                            {% for author in popular_authors %}
+                                <a href="{{ author.get_absolute_url }}" class="list-group-item list-group-item-action">
+                                    {{ author.user.username }}
+                                    <small class="text-muted d-block">{{ author.post_count }} posts</small>
+                                </a>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Categories -->
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <i class="bi bi-folder"></i> Categories
+                        </div>
+                        <div class="card-body">
+                            {% for category in categories %}
+                                <a href="{% url 'blogs' %}?category={{ category.slug }}" class="btn btn-outline-primary btn-sm mb-2 me-2">
+                                    {{ category.name }}
+                                </a>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Tags -->
+                    <div class="card">
+                        <div class="card-header">
+                            <i class="bi bi-tags"></i> Tags
+                        </div>
+                        <div class="card-body">
+                            {% for tag in tags %}
+                                <a href="{% url 'blogs' %}?tag={{ tag.slug }}" class="btn btn-outline-secondary btn-sm mb-2 me-2">
+                                    #{{ tag.name }}
+                                </a>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endblock %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-body-tertiary py-4 mt-auto">
+        <div class="container text-center">
+            <p class="mb-0">&copy; {% now "Y" %} Blog. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Dark mode toggle
+        const themeToggle = document.getElementById('darkModeToggle');
+        const icon = themeToggle.querySelector('i');
+        
+        function setTheme(darkMode) {
+            document.documentElement.setAttribute('data-bs-theme', darkMode ? 'dark' : 'light');
+            icon.className = darkMode ? 'bi bi-sun' : 'bi bi-moon-stars';
+            
+            if (document.cookie.indexOf('csrftoken') !== -1) {
+                fetch('/blog/toggle-dark-mode/', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.cookie.match(/csrftoken=([\w-]+)/)[1],
+                    },
+                });
+            }
+        }
+        
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = document.documentElement.getAttribute('data-bs-theme');
+            setTheme(currentTheme === 'light');
+        });
+        
+        // Initialize theme from user preference
+        if (document.cookie.indexOf('dark_mode=true') !== -1) {
+            setTheme(true);
+        }
+        
+        // Lazy loading for images
+        document.addEventListener('DOMContentLoaded', function() {
+            const images = document.querySelectorAll('img[loading="lazy"]');
+            if ('loading' in HTMLImageElement.prototype) {
+                images.forEach(img => {
+                    img.src = img.dataset.src;
+                });
+            } else {
+                // Fallback for browsers that don't support lazy loading
+                const script = document.createElement('script');
+                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/lazysizes/5.3.2/lazysizes.min.js';
+                document.body.appendChild(script);
+            }
+        });
+    </script>
+</body>
+</html>

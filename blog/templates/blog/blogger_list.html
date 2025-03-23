@@ -1,0 +1,66 @@
+{% extends "blog/base_generic.html" %}
+
+{% block title %}Our Bloggers{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">Our Bloggers</h1>
+    
+    <div class="row row-cols-1 row-cols-md-3 g-4">
+        {% for blogger in blogger_list %}
+            <div class="col">
+                <div class="card h-100">
+                    <div class="card-body text-center">
+                        {% if blogger.user.userprofile.avatar %}
+                            <img src="{{ blogger.user.userprofile.avatar.url }}" 
+                                 alt="{{ blogger.user.username }}" 
+                                 class="rounded-circle mb-3" 
+                                 style="width: 120px; height: 120px; object-fit: cover;">
+                        {% else %}
+                            <i class="bi bi-person-circle display-3 text-muted mb-3"></i>
+                        {% endif %}
+                        
+                        <h5 class="card-title">{{ blogger.user.username }}</h5>
+                        
+                        {% if blogger.bio %}
+                            <p class="card-text text-muted">{{ blogger.bio|truncatewords:30 }}</p>
+                        {% endif %}
+                        
+                        <div class="d-flex justify-content-center gap-2 mb-3">
+                            {% if blogger.website %}
+                                <a href="{{ blogger.website }}" class="btn btn-outline-primary btn-sm" target="_blank">
+                                    <i class="bi bi-globe"></i>
+                                </a>
+                            {% endif %}
+                            {% if blogger.twitter %}
+                                <a href="https://twitter.com/{{ blogger.twitter }}" class="btn btn-outline-info btn-sm" target="_blank">
+                                    <i class="bi bi-twitter"></i>
+                                </a>
+                            {% endif %}
+                            {% if blogger.github %}
+                                <a href="https://github.com/{{ blogger.github }}" class="btn btn-outline-dark btn-sm" target="_blank">
+                                    <i class="bi bi-github"></i>
+                                </a>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="text-muted small mb-3">
+                            {{ blogger.blog_set.count }} posts
+                        </div>
+                        
+                        <a href="{{ blogger.get_absolute_url }}" class="btn btn-primary">
+                            View Profile
+                        </a>
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <div class="col-12">
+                <div class="alert alert-info">
+                    No bloggers found.
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
