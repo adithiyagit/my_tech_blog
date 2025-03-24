@@ -75,6 +75,9 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'diyblog.wsgi.application'
+CSRF_TRUSTED_ORIGINS = [
+    "https://techblogsite-hnfrbwa8gpeeddef.centralus-01.azurewebsites.net"
+]
 
 
 # Database
